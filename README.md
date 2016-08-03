@@ -3,7 +3,7 @@
 
 Converts HTML5 Canvas to a TIFF file (blob, data-uri, typed array).
 
-The TIFF file is standard baseline compliant and supports RGB + alpha
+The generated TIFF file is standard baseline compliant and supports RGB + alpha
 channel as well as compression at various compression levels, and with
 option for byte-order (big-endian or little-endian) as well as DPI settings.
 
@@ -14,7 +14,7 @@ Features
 - Fast
 - Asynchronous and non-blocking
 - Supports alpha channel
-- Supports optional ZIP compression (async)
+- Supports optional ZIP compression
 - Convert directly to `ArrayBuffer`
 - Convert directly to `Blob`
 - Convert directly to Data-URI
@@ -41,34 +41,32 @@ Usage
 
 Include the script in header or before the script section in your HTML file.
 
-To convert the canvas to a TIFF file:
+To convert the canvas to a TIFF file as a Data-URI:
 ```javascript
 CanvasToTIFF.toDataURL(canvas, function(uri) {
-	// uri is a Data-URI that can be used as source for images etc.
-	// uri = "data:image/tiff;base64, ...etc...";
+	// use here
 });
 ```
 
-A faster option to Data-URIs is using Blobs:
+To convert the canvas to a TIFF file as a blob (much faster than Data-URI
+and more suitable for large files):
 ```javascript
 CanvasToTIFF.toBlob(canvas, function(blob) {
-	// blob object can be converted to an objectURL and then
-	// set as source for images, or as download target:
-	var url = URL.createObjectURL(blob);
+	// use here
+});
+```
+
+To convert it to an ArrayBuffer:
+```javascript
+CanvasToTIFF.toArrayBuffer(canvas, function(buffer) {
+	// use here
 });
 ```
 
 For convenience, a direct Canvas to ObjectURL method is included:
 ```javascript
 CanvasToTIFF.toObjectURL(canvas, function(url) {
-	// can be used as source for image or download target
-});
-```
-
-To convert it to an ArrayBuffer that can be sent over the net:
-```javascript
-CanvasToTIFF.toArrayBuffer(canvas, function(buffer) {
-	// buffer is ArrayBuffer with the TIFF file
+	// use here
 });
 ```
 
@@ -79,7 +77,7 @@ options.
 requirements must be fulfilled.
 
 TIP: The *ezlib* library is included to support ZIP compression.
-It can be left out to reduce code size (see `canvastotiff_no_deflate.min.js` [2.7 kb]).
+It can be left out to reduce code size (see `canvastotiff_no_deflate.min.js` [2.4 kb]).
 CanvasToTIFF will adopt automatically and accordingly if not found, and 
 produce a uncompressed TIFF file instead.
 
@@ -99,7 +97,8 @@ See contributors [here](https://github.com/epistemex/canvas-to-tiff/graphs/contr
 License
 -------
 
-Released under [MIT license](http://choosealicense.com/licenses/mit/). You may use this class in both commercial and non-commercial projects provided that full header (minified and developer versions) is included.
+Released under [MIT license](http://choosealicense.com/licenses/mit/). You may use this class in both commercial and non-commercial projects 
+provided that full header (minified and developer versions) is included.
 
 
 *&copy; Epistemex 2015-2016*

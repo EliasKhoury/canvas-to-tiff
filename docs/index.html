@@ -85,21 +85,21 @@
 
     <section class="readme-section">
         <article><h1>﻿canvas-to-tiff</h1><p>Converts HTML5 Canvas to a TIFF file (blob, data-uri, typed array).</p>
-<p>The TIFF file is standard baseline compliant and supports RGB + alpha
+<p>The generated TIFF file is standard baseline compliant and supports RGB + alpha
 channel as well as compression at various compression levels, and with
 option for byte-order (big-endian or little-endian) as well as DPI settings.</p>
 <h2>Features</h2><ul>
 <li>Fast</li>
 <li>Asynchronous and non-blocking</li>
 <li>Supports alpha channel</li>
-<li>Supports optional ZIP compression (async)</li>
+<li>Supports optional ZIP compression</li>
 <li>Convert directly to <code>ArrayBuffer</code></li>
 <li>Convert directly to <code>Blob</code></li>
 <li>Convert directly to Data-URI</li>
 <li>Support both big-endian (default) and little-endian byte order</li>
 <li>Can set arbitrary DPI for X and Y directions</li>
 <li>Can obtain a web-gl based canvas as well.</li>
-<li>Documented source incl. HTML version (see <code>docs/</code> folder)</li>
+<li>Full <a href="http://epistemex.github.io/canvas-to-tiff/docs/index.html">documentation</a></li>
 <li>Works with all major browsers incl. IE</li>
 <li>No dependencies (ezlib deflate if compression is wanted. Included).</li>
 </ul>
@@ -111,32 +111,31 @@ option for byte-order (big-endian or little-endian) as well as DPI settings.</p>
 <li><a href="https://raw.githubusercontent.com/epistemex/canvas-to-tiff/master/canvastotiff.min.js">canvastotiff.min.js</a></li>
 </ul>
 <h2>Usage</h2><p>Include the script in header or before the script section in your HTML file.</p>
-<p>To convert the canvas to a TIFF file:</p>
+<p>To convert the canvas to a TIFF file as a Data-URI:</p>
 <pre class="prettyprint source lang-javascript"><code>CanvasToTIFF.toDataURL(canvas, function(uri) {
-    // uri is a Data-URI that can be used as source for images etc.
-    // uri = &quot;data:image/tiff;base64, ...etc...&quot;;
-});</code></pre><p>A faster option to Data-URIs is using Blobs:</p>
+    // use here
+});</code></pre><p>To convert the canvas to a TIFF file as a blob (much faster than Data-URI
+and more suitable for large files):</p>
 <pre class="prettyprint source lang-javascript"><code>CanvasToTIFF.toBlob(canvas, function(blob) {
-    // blob object can be converted to an objectURL and then
-    // set as source for images, or as download target:
-    var url = URL.createObjectURL(blob);
+    // use here
+});</code></pre><p>To convert it to an ArrayBuffer:</p>
+<pre class="prettyprint source lang-javascript"><code>CanvasToTIFF.toArrayBuffer(canvas, function(buffer) {
+    // use here
 });</code></pre><p>For convenience, a direct Canvas to ObjectURL method is included:</p>
 <pre class="prettyprint source lang-javascript"><code>CanvasToTIFF.toObjectURL(canvas, function(url) {
-    // can be used as source for image or download target
-});</code></pre><p>To convert it to an ArrayBuffer that can be sent over the net:</p>
-<pre class="prettyprint source lang-javascript"><code>CanvasToTIFF.toArrayBuffer(canvas, function(buffer) {
-    // buffer is ArrayBuffer with the TIFF file
+    // use here
 });</code></pre><p>Also see <code>www/test.html</code> for sample use of compression and byte-order 
 options.</p>
 <p><strong>NOTE:</strong> As with ordinary canvas Cross-Origin Resource Sharing (CORS) 
 requirements must be fulfilled.</p>
 <p>TIP: The <em>ezlib</em> library is included to support ZIP compression.
-It can be left out to reduce code size (see <code>canvastotiff_no_deflate.min.js</code> [2.7 kb]).
+It can be left out to reduce code size (see <code>canvastotiff_no_deflate.min.js</code> [2.4 kb]).
 CanvasToTIFF will adopt automatically and accordingly if not found, and 
 produce a uncompressed TIFF file instead.</p>
 <h2>Issues</h2><p>See the <a href="https://github.com/epistemex/canvas-to-tiff/issues">issue tracker</a> for details.</p>
 <h2>Contributors</h2><p>See contributors <a href="https://github.com/epistemex/canvas-to-tiff/graphs/contributors">here</a></p>
-<h2>License</h2><p>Released under <a href="http://choosealicense.com/licenses/mit/">MIT license</a>. You may use this class in both commercial and non-commercial projects provided that full header (minified and developer versions) is included.</p>
+<h2>License</h2><p>Released under <a href="http://choosealicense.com/licenses/mit/">MIT license</a>. You may use this class in both commercial and non-commercial projects 
+provided that full header (minified and developer versions) is included.</p>
 <p><em>&copy; Epistemex 2015-2016</em></p>
 <p><img src="http://i.imgur.com/wZSsyt8.png" alt="Epistemex"></p></article>
     </section>

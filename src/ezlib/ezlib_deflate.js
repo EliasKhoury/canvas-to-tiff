@@ -132,7 +132,7 @@ var ezlib = ezlib || {
  *
  * @example
  * ezlib.deflateAsync(data).then(function(e) { /* e.result = deflated data});
- * @param {Uint8Array|string} data - data to deflate. Strings require TextEncoder support in the browser.
+ * @param {*} data - data to deflate. Strings require TextEncoder support in the browser.
  * @param {*} [options] - see [ezlib.Deflate]{@linkcode ezlib.Deflate} for detailed options
  * @param {function} [options.progress] - progress callback
  * @param {number} [options.lapTime=200] - lap-time per block given in milliseconds

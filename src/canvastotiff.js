@@ -1,5 +1,5 @@
 /*!
-	canvas-to-tiff 1.6.0
+	canvas-to-tiff 1.6.1
 	(c) epistemex.com 2015-2016
 	MIT License
 */
@@ -24,7 +24,7 @@ var CanvasToTIFF = {
 	_dly: 7,
 
 	/**
-	 * Convert a 2D canvas context to a ArrayBuffer containing a TIFF file.
+	 * Convert a canvas to an ArrayBuffer representing a TIFF file.
 	 * Includes the alpha channel. The call is asynchronous so a callback
 	 * must be provided. The image data is ZIP compressed by default.
 	 *
@@ -61,9 +61,7 @@ var CanvasToTIFF = {
 			dpiY       = +(options.dpiY || options.dpi || 96) | 0,
 			canDeflate = typeof ezlib !== "undefined" && typeof ezlib.Deflate !== "undefined",
 			compLevel  = typeof options.compressionLevel === "number" ? Math.max(0, Math.min(9, options.compressionLevel)) : 6,
-			ctx, idata,
-			result, length, fileLength,
-			file, file8, view;
+			ctx, idata;
 
 		/*
 			Check if we can obtain a 2D context for canvas
@@ -93,20 +91,17 @@ var CanvasToTIFF = {
 			}
 			catch (err) {
 				if (options.onError) options.onError(err);
-				else console.log(err);
 			}
 		})(ctx);
 
 		/*
-			Compress data if enabled / available
+			Compress data if compression is enabled / available
 		 */
 		if (canDeflate && (typeof options.compress === "boolean" ? options.compress : true)) {
 			ezlib.deflateAsync(idata.data, {level: compLevel}, function(e) {
-				result = e.result;
-				finish()
+				finish(e.result)
 			}, function(e) {
 				if (options.onError) options.onError(e);
-				else console.log(e);
 			});
 		}
 		else finish();
@@ -114,12 +109,13 @@ var CanvasToTIFF = {
 		/*
 			Build TIFF file
 		 */
-		function finish() {
-			length = result ? result.length : idata.data.length;
-			fileLength = iOffset + length;
-			file       = new ArrayBuffer(fileLength);
-			file8      = new Uint8Array(file);
-			view       = new DataView(file);
+		function finish(result) {
+
+			var length = result ? result.length : idata.data.length,
+				fileLength = iOffset + length,
+				file = new ArrayBuffer(fileLength),
+				file8 = new Uint8Array(file),
+				view = new DataView(file);
 
 			// Header
 			set16(lsb ? 0x4949 : 0x4d4d);							// II or MM
@@ -169,75 +165,75 @@ var CanvasToTIFF = {
 			file8.set(result ? result : idata.data, iOffset);
 
 			// make call async
-			setTimeout(function() { callback(file) }, me._dly)
-		}
+			setTimeout(function() { callback(file) }, me._dly);
 
-		function getDateStr() {
-			var d = new Date();
-			return d.getFullYear() + ":" + pad2(d.getMonth() + 1) + ":" + pad2(d.getDate()) + " "
+			function getDateStr() {
+				var d = new Date();
+				return d.getFullYear() + ":" + pad2(d.getMonth() + 1) + ":" + pad2(d.getDate()) + " "
 					+ pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds());
 
-			function pad2(v) {return v < 10 ? "0" + v : v}
-		}
-
-		// helper method to move current buffer position
-		function set16(data) {
-			view.setUint16(pos, data, lsb);
-			pos += 2
-		}
-
-		function set32(data) {
-			view.setUint32(pos, data, lsb);
-			pos += 4
-		}
-
-		function setStr(str) {
-			var i = 0;
-			while(i < str.length) view.setUint8(pos++, str.charCodeAt(i++) & 0xff);
-			if (pos & 1) pos++
-		}
-
-		function getStrLen(str) {
-			var l = str.length;
-			return l & 1 ? l + 1 : l
-		}
-
-		function addEntry(tag, type, count, value, dltOffset) {
-			set16(tag);
-			set16(type);
-			set32(count);
-
-			if (dltOffset) {
-				offset += dltOffset;
-				offsetList.push(pos)
+				function pad2(v) {return v < 10 ? "0" + v : v}
 			}
 
-			if (count === 1 && type === 3 && !dltOffset) {
-				set16(value);
-				set16(0)
+			// helper method to move current buffer position
+			function set16(data) {
+				view.setUint16(pos, data, lsb);
+				pos += 2
 			}
-			else
-				set32(value);
 
-			entries++
-		}
+			function set32(data) {
+				view.setUint32(pos, data, lsb);
+				pos += 4
+			}
 
-		function addIDF(offset) {
-			idfOffset = offset || pos;
-			pos += 2
-		}
+			function setStr(str) {
+				var i = 0;
+				while(i < str.length) view.setUint8(pos++, str.charCodeAt(i++) & 0xff);
+				if (pos & 1) pos++
+			}
 
-		function endIDF() {
-			view.setUint16(idfOffset, entries, lsb);
-			set32(0);
+			function getStrLen(str) {
+				var l = str.length;
+				return l & 1 ? l + 1 : l
+			}
 
-			var delta = 14 + entries * 12;			 // 14 = offset to IDF (8) + IDF count (2) + end pointer (4)
+			function addEntry(tag, type, count, value, dltOffset) {
+				set16(tag);
+				set16(type);
+				set32(count);
 
-			// compile offsets
-			for(var i = 0, p, o; i < offsetList.length; i++) {
-				p = offsetList[i];
-				o = view.getUint32(p, lsb);
-				view.setUint32(p, o + delta, lsb)
+				if (dltOffset) {
+					offset += dltOffset;
+					offsetList.push(pos)
+				}
+
+				if (count === 1 && type === 3 && !dltOffset) {
+					set16(value);
+					set16(0)
+				}
+				else
+					set32(value);
+
+				entries++
+			}
+
+			function addIDF(offset) {
+				idfOffset = offset || pos;
+				pos += 2
+			}
+
+			function endIDF() {
+				view.setUint16(idfOffset, entries, lsb);
+				set32(0);
+
+				var delta = 14 + entries * 12;			 // 14 = offset to IDF (8) + IDF count (2) + end pointer (4)
+
+				// compile offsets
+				for(var i = 0, p, o; i < offsetList.length; i++) {
+					p = offsetList[i];
+					o = view.getUint32(p, lsb);
+					view.setUint32(p, o + delta, lsb)
+				}
 			}
 		}
 	},
@@ -295,44 +291,14 @@ var CanvasToTIFF = {
 	 * @static
 	 */
 	toDataURL: function(canvas, callback, options) {
-
-		var me = this;
-
-		me.toArrayBuffer(canvas, function(file) {
-			var buffer = new Uint8Array(file),
-				blockSize = 1<<20,
-				block = blockSize,
-				bs = "", base64 = "", i = 0,
-				l = buffer.length;
-
-			// This is a necessary step before we can use btoa(). We can
-			// replace this later with a direct byte-buffer to Base-64 routine.
-			// Will do for now, impacts only with very large bitmaps (in which
-			// case toBlob() should be used).
-			(function prepBase64() {
-
-				while(i < l && block-- > 0)
-					bs += String.fromCharCode(buffer[i++]);
-
-				if (i < l) {
-					block = blockSize;
-					setTimeout(prepBase64, me._dly)
-				}
-				else {
-					// convert string to Base-64
-					i = 0;
-					l = bs.length;
-					block = 180000;		// !must be divisible by 3 -> integer
-
-					(function toBase64() {
-						base64 += btoa(bs.substr(i, block));
-						i += block;
-						(i < l)
-							? setTimeout(toBase64, me._dly)
-							: callback("data:image/tiff;base64," + base64)
-					})()
-				}
-			})();
+		this.toBlob(canvas, function(blob) {
+			var fr = new FileReader();
+			fr.onload = function() {callback(fr.result)};
+			fr.onerror = function() {
+				if (options && options.onError)
+					options.onError({msg: "Error converting data to Data-URI."})
+			};
+			fr.readAsDataURL(blob)
 		}, options)
 	}
 };
