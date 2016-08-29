@@ -42,19 +42,17 @@ var CanvasToTIFF = {
 	 * @param {function} [options.onError] - Set error handler
 	 * @static
 	 */
-	toArrayBuffer: function(canvas, callback, options) {
+	toArrayBuffer: function(canvases, callback, options) {
 
-		options = options || {};
-
-		var me 		   = this,
-			w          = canvas.width,
-			h          = canvas.height,
+		var images     = [],
+			me         = this,
 			pos        = 0,
 			offset     = 0,
 			iOffset    = 258,
+			IFDOffset  = 8,
 			entries    = 0,
 			offsetList = [],
-			idfOffset,
+			IFDOffset,
 			sid        = "canvas-to-tiff 1.6\0",
 			lsb        = !!options.littleEndian,
 			dpiX       = +(options.dpiX || options.dpi || 96) | 0,
@@ -63,109 +61,149 @@ var CanvasToTIFF = {
 			compLevel  = typeof options.compressionLevel === "number" ? Math.max(0, Math.min(9, options.compressionLevel)) : 6,
 			ctx, idata;
 
-		/*
-			Check if we can obtain a 2D context for canvas
-		 */
-		ctx = canvas.getContext("2d");
+		for (const c of canvases) {
+			console.log(extractData(c,this));
+			images.push(extractData(c,this));
+		}
+		finish(images);
 
-		if (!ctx) {
-			// could not get a 2D context, make a new internal canvas
-			ctx = document.createElement("canvas").getContext("2d");
-			if (ctx) {
-				ctx.canvas.width = w;
-				ctx.canvas.height = h;
-				ctx.drawImage(canvas, 0, 0);
+		function extractData(canvas) {
+
+			options = options || {};
+
+			var result     = null,
+				w          = canvas.width,
+				h          = canvas.height;
+
+			/*
+				Check if we can obtain a 2D context for canvas
+			 */
+			ctx = canvas.getContext("2d");
+
+			if (!ctx) {
+				// could not get a 2D context, make a new internal canvas
+				ctx = document.createElement("canvas").getContext("2d");
+				if (ctx) {
+					ctx.canvas.width = w;
+					ctx.canvas.height = h;
+					ctx.drawImage(canvas, 0, 0);
+				}
+				else {
+					if (options.onError) options.onError({msg: "Cannot obtain a 2D context."});
+					else console.log(e);
+				}
 			}
-			else {
-				if (options.onError) options.onError({msg: "Cannot obtain a 2D context."});
-				else console.log(e);
+
+			/*
+				Get image data
+			 */
+			idata = (function(ctx) {
+				try {
+					return ctx.getImageData(0, 0, w, h);	// throws security error (18) if canvas is tainted
+				}
+				catch (err) {
+					if (options.onError) options.onError(err);
+				}
+			})(ctx);
+
+			/*
+				Compress data if compression is enabled / available
+			 */
+			if (canDeflate && (typeof options.compress === "boolean" ? options.compress : true)) {
+				ezlib.deflateAsync(idata.data, {level: compLevel}, function(e) {
+					result = e.result;
+				}, function(e) {
+					if (options.onError) options.onError(e);
+				});
+				
+			}else result = idata
+
+			return {
+				"result"     : result,
+				"w"          : w,
+				"h"          : h
 			}
 		}
-
-		/*
-			Get image data
-		 */
-		idata = (function(ctx) {
-			try {
-				return ctx.getImageData(0, 0, w, h);	// throws security error (18) if canvas is tainted
-			}
-			catch (err) {
-				if (options.onError) options.onError(err);
-			}
-		})(ctx);
-
-		/*
-			Compress data if compression is enabled / available
-		 */
-		if (canDeflate && (typeof options.compress === "boolean" ? options.compress : true)) {
-			ezlib.deflateAsync(idata.data, {level: compLevel}, function(e) {
-				finish(e.result)
-			}, function(e) {
-				if (options.onError) options.onError(e);
-			});
-		}
-		else finish();
 
 		/*
 			Build TIFF file
 		 */
-		function finish(result) {
+		function finish(results) {
 
-			var length = result ? result.length : idata.data.length,
-				fileLength = iOffset + length,
-				file = new ArrayBuffer(fileLength),
+			var fileLength = 0;
+			// Calculate total file length
+			for (const image of results){
+				fileLength += image.result.length ? image.result.length + iOffset : image.result.data.length + iOffset;
+			}
+
+			var file = new ArrayBuffer(fileLength),
 				file8 = new Uint8Array(file),
 				view = new DataView(file);
 
 			// Header
-			set16(lsb ? 0x4949 : 0x4d4d);							// II or MM
-			set16(42);												// magic 42
-			set32(8);												// offset to first IFD
+			set16(lsb ? 0x4949 : 0x4d4d);					    // II or MM
+			set16(42);										    // magic 42
+			set32(IFDOffset);								    // offset to first IFD
 
-			// IFD
-			addIDF();												// IDF start
-			addEntry(0xfe , 4, 1, 0);								// NewSubfileType
-			addEntry(0x100, 4, 1, w);								// ImageWidth
-			addEntry(0x101, 4, 1, h);								// ImageLength (height)
-			addEntry(0x102, 3, 4, offset, 8);						// BitsPerSample
-			addEntry(0x103, 3, 1, result ? 8 : 1);					// Compression (ZIP or raw)
-			addEntry(0x106, 3, 1, 2);								// PhotometricInterpretation: RGB
-			addEntry(0x111, 4, 1, iOffset, 0);						// StripOffsets
-			addEntry(0x115, 3, 1, 4);								// SamplesPerPixel
-			addEntry(0x117, 4, 1, length);							// StripByteCounts
-			addEntry(0x11a, 5, 1, offset, 8);						// XResolution
-			addEntry(0x11b, 5, 1, offset, 8);						// YResolution
-			addEntry(0x128, 3, 1, 2);								// ResolutionUnit: inch
-			addEntry(0x131, 2, sid.length, offset, getStrLen(sid));	// sid
-			addEntry(0x132, 2, 0x14, offset, 0x14);					// Datetime
-			addEntry(0x152, 3, 1, 2);								// ExtraSamples
-			endIDF();
 
-			// Fields section > long ---------------------------
+			for (var i = 1; i <= results.length ; i++) {
+				var image = results[i-1],
+					length = image.result.length ? image.result.length : image.result.data.length,
+					imageData = image.result.length ? image.result : image.result.data,
+					nextIFD   = length / 8 + iOffset;
 
-			// BitsPerSample (2x4), 8,8,8,8 (RGBA)
-			set32(0x80008);
-			set32(0x80008);
 
-			// XRes PPI
-			set32(dpiX);
-			set32(1);
+				// IFD
+				addIFD();												// IFD start
+				addEntry(0xfe , 4, 1, 0);								// NewSubfileType
+				addEntry(0x100, 4, 1, image.w);							// ImageWidth
+				addEntry(0x101, 4, 1, image.h);							// ImageLength (height)
+				addEntry(0x102, 3, 4, offset, 8);					    // BitsPerSample
+				addEntry(0x103, 3, 1, image.result.length ? 8 : 1);		// Compression (ZIP or raw)
+				addEntry(0x106, 3, 1, 2);								// PhotometricInterpretation: RGB
+				addEntry(0x111, 4, 1, iOffset, 0);				        // StripOffsets
+				addEntry(0x115, 3, 1, 4);								// SamplesPerPixel
+				addEntry(0x117, 4, 1, length);							// StripByteCounts
+				addEntry(0x11a, 5, 1, offset, 8);					    // XResolution
+				addEntry(0x11b, 5, 1, offset, 8);					    // YResolution
+				addEntry(0x128, 3, 1, 2);								// ResolutionUnit: inch
+				addEntry(0x131, 2, sid.length, offset, getStrLen(sid));	// sid
+				addEntry(0x132, 2, 0x14, offset, 0x14);			        // Datetime
+				addEntry(0x152, 3, 1, 2);								// ExtraSamples
+				(i == results.length) ? endIFD() : endIFD(nextIFD)      // write offset to the next IFD if there is another image
 
-			// YRes PPI
-			set32(dpiY);
-			set32(1);
+				// Fields section > long ---------------------------
 
-			// sid
-			setStr(sid);
+				// BitsPerSample (2x4), 8,8,8,8 (RGBA)
+				set32(0x80008);
+				set32(0x80008);
 
-			// date
-			setStr(getDateStr());
+				// XRes PPI
+				set32(dpiX);
+				set32(1);
 
-			// image data
-			file8.set(result ? result : idata.data, iOffset);
+				// YRes PPI
+				set32(dpiY);
+				set32(1);
+
+				// sid
+				setStr(sid);
+
+				// date
+				setStr(getDateStr());
+
+				//console.log(iOffset);
+				//console.log(length/8);
+				file8.set(imageData, iOffset);
+				//pos     += length;
+				iOffset += length;
+
+			}
+			
 
 			// make call async
-			setTimeout(function() { callback(file) }, me._dly);
+			//setTimeout(function() { callback(file) }, me._dly);
+			return 0;
 
 			function getDateStr() {
 				var d = new Date();
@@ -204,35 +242,39 @@ var CanvasToTIFF = {
 
 				if (dltOffset) {
 					offset += dltOffset;
-					offsetList.push(pos)
+					offsetList.push(pos);
 				}
 
 				if (count === 1 && type === 3 && !dltOffset) {
 					set16(value);
-					set16(0)
+					set16(0);
 				}
 				else
 					set32(value);
 
-				entries++
+				entries++;
 			}
 
-			function addIDF(offset) {
-				idfOffset = offset || pos;
-				pos += 2
+			function addIFD(offset) {
+				IFDOffset = offset || pos;
+				pos += 2;
 			}
 
-			function endIDF() {
-				view.setUint16(idfOffset, entries, lsb);
+			function endIFD(nextImage) {
+				view.setUint16(IFDOffset, entries, lsb);
+				console.log(entries);
+				//console.log(IFDOffset);
+				//nextImage ? set32(nextImage) : set32(0);
 				set32(0);
 
-				var delta = 14 + entries * 12;			 // 14 = offset to IDF (8) + IDF count (2) + end pointer (4)
+				var delta = 14 + entries * 12;			 // 14 = offset to IFD (8) + IFD count (2) + end pointer (4)
+				//console.log(delta);
 
 				// compile offsets
 				for(var i = 0, p, o; i < offsetList.length; i++) {
 					p = offsetList[i];
 					o = view.getUint32(p, lsb);
-					view.setUint32(p, o + delta, lsb)
+					view.setUint32(p, o + delta, lsb);
 				}
 			}
 		}
