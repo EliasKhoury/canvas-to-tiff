@@ -195,12 +195,12 @@ var CanvasToTIFF = {
 				// date
 				setStr(getDateStr());
 
-				//console.log(iOffset);
-				//console.log(length/8);
 				file8.set(imageData, iOffset);
-				pos     += length;
-				iOffset += length + 258; // length of the image + length of the IFD
-				offset  += length;// + 258 - 72;
+
+				// Need to calculate the offsets for the next IFD, strip, and image.
+				pos     += length; // Start writing the next IFD after the image data
+				iOffset += length + 250; // The strip offsets for the next IFD
+				offset  += length + 186; // The offset for the long values for the next IFD
 
 			}
 			
