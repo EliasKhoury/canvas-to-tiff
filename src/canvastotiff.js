@@ -150,8 +150,11 @@ var CanvasToTIFF = {
 				var image = results[i-1],
 					length = image.result.length ? image.result.length : image.result.data.length,
 					imageData = image.result.length ? image.result : image.result.data,
-					nextIFD   = length / 8 + iOffset;
+					nextIFD   = length + iOffset;
 
+				// Reset entries for every IFD
+				entries    = 0; 
+				offsetList = [];
 
 				// IFD
 				addIFD();												// IFD start
@@ -195,14 +198,15 @@ var CanvasToTIFF = {
 				//console.log(iOffset);
 				//console.log(length/8);
 				file8.set(imageData, iOffset);
-				//pos     += length;
-				iOffset += length;
+				pos     += length;
+				iOffset += length + 258; // length of the image + length of the IFD
+				offset  += length;// + 258 - 72;
 
 			}
 			
 
 			// make call async
-			//setTimeout(function() { callback(file) }, me._dly);
+			setTimeout(function() { callback(file) }, me._dly);
 			return 0;
 
 			function getDateStr() {
@@ -264,8 +268,8 @@ var CanvasToTIFF = {
 				view.setUint16(IFDOffset, entries, lsb);
 				console.log(entries);
 				//console.log(IFDOffset);
-				//nextImage ? set32(nextImage) : set32(0);
-				set32(0);
+				nextImage ? set32(nextImage) : set32(0);
+				//set32(0);
 
 				var delta = 14 + entries * 12;			 // 14 = offset to IFD (8) + IFD count (2) + end pointer (4)
 				//console.log(delta);
