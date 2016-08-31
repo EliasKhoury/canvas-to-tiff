@@ -23,9 +23,10 @@
 	<canvas></canvas>
 	<canvas></canvas>
 	<canvas></canvas>
+	<canvas></canvas>
 	<div>Get <a href="https://github.com/epistemex/canvas-to-tiff" target="_blank">canvas-to-tiff</a> at GitHub.</div>
 
-<script src="/src/canvastotiff.js"></script>
+<script src="./js/canvastotiff.js"></script>
 <script>
 
 	var canvases = document.getElementsByTagName("canvas"),
@@ -54,25 +55,6 @@
 		};
 		img.src = "gfx/image"+ image +".jpg";
 	}
-
-/*
-	var canvas = document.querySelector("canvas"),
-		ctx = canvas.getContext("2d"),
-		isIE = "msSaveBlob" in navigator,
-		img = new Image,
-		btn = document.querySelector("button");
-
-	img.onload = function() {
-		canvas.width = this.width;
-		canvas.height = this.height;
-		ctx.drawImage(this, 0, 0);
-		btn.onclick = saveTIFF;
-	};
-
-
-
-	img.src = "gfx/image1.jpg";
-*/
 
 	function saveTIFF() {
 

@@ -7,6 +7,10 @@ The generated TIFF file is standard baseline compliant and supports RGB + alpha
 channel as well as compression at various compression levels, and with
 option for byte-order (big-endian or little-endian) as well as DPI settings.
 
+The code presented is a modified version of the original canvas-to-tiff developed by
+epistemex. Support has been added for multi page TIFF files.
+
+
 
 Features
 --------

@@ -2,7 +2,6 @@
 	canvas-to-tiff 1.6.1
 	(c) epistemex.com 2015-2016
 	MIT License
-	Modified by Elias Khoury: 31/08/2016
 */
 
 "use strict";
@@ -31,7 +30,7 @@ var CanvasToTIFF = {
 	 *
 	 * Note that CORS requirements must be fulfilled.
 	 *
-	 * @param {HTMLCanvasElement} canvases - an array of canvas elements to export
+	 * @param {HTMLCanvasElement} canvas - the canvas element to export
 	 * @param {function} callback - called when conversion is done. Argument is ArrayBuffer
 	 * @param {object} [options] - an option object
 	 * @param {boolean} [options.compress=true] - enable ZIP compression (requires ezlib deflate - if not available it will revert gracefully to uncompressed)
